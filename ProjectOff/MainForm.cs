@@ -9,7 +9,8 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.Serialization;
-
+using System.IO.Compression;
+using System.Net;
 
 namespace ProjectOff
 {
@@ -55,6 +56,37 @@ namespace ProjectOff
         public MainForm()
         {
             InitializeComponent();
+
+            WebClient webClient = new WebClient();
+            var client = new WebClient();
+            webClient.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.NoCacheNoStore);
+
+            if (!webClient.DownloadString("https://www.dropbox.com/scl/fi/e3dkg7hsmhz3dald7q2n3/Update.txt?rlkey=1caeslgdoknbt853zwk7bskjb&dl=1").Contains("1.0.0"))
+            {
+                if (MessageBox.Show("Новое обновление уже доступно! Хотите установить более новую версию?", "Обновление", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes){
+               
+                try
+                {
+                    if(File.Exists(@".\Setup.msi")) { File.Delete(@".\Setup.msi"); }
+                    client.DownloadFile("https://www.dropbox.com/scl/fi/r2wlktcj6d9h4kvngv3q0/Setup.zip?rlkey=2m75eql9k4cei4fsroc8tn19n&dl=1", @"Setup.zip");
+                    string zipPath = @".\Setup.zip";
+                    string extractPath = @".\";
+                    ZipFile.ExtractToDirectory(zipPath, extractPath);
+
+                    Process process = new Process();
+                    process.StartInfo.FileName = "msiexec";
+                    process.StartInfo.Arguments = String.Format("/i Setup.msi");
+
+                    this.Close();
+                    process.Start();
+                }
+                catch
+                {
+
+                }
+            }
+        }
+
             guna2TextBox1.MaxLength = MaxSeconds.ToString().Length;
             guna2TextBox2.MaxLength = MaxSeconds.ToString().Length;
             presetsDataTable = new DataTable("Presets");
@@ -262,6 +294,12 @@ namespace ProjectOff
         {
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
+        }
+
+        private void версияПриложенияToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string version = Application.ProductVersion;
+            MessageBox.Show($"Данное приложение находится на стадии не конечного продукта!\nТекущая версия приложения: {version}", "Версия приложения", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }

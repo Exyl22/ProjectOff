@@ -50,6 +50,7 @@
             this.открытьToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.сохранитьToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.label5 = new System.Windows.Forms.Label();
+            this.версияПриложенияToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.guna2Panel1.SuspendLayout();
             this.guna2Panel3.SuspendLayout();
             this.guna2Panel2.SuspendLayout();
@@ -276,7 +277,8 @@
             // menuStrip1
             // 
             this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.файлToolStripMenuItem});
+            this.файлToolStripMenuItem,
+            this.версияПриложенияToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
             this.menuStrip1.Size = new System.Drawing.Size(639, 24);
@@ -316,6 +318,13 @@
             this.label5.Size = new System.Drawing.Size(81, 13);
             this.label5.TabIndex = 11;
             this.label5.Text = "Лимит 24 часа";
+            // 
+            // версияПриложенияToolStripMenuItem
+            // 
+            this.версияПриложенияToolStripMenuItem.Name = "версияПриложенияToolStripMenuItem";
+            this.версияПриложенияToolStripMenuItem.Size = new System.Drawing.Size(131, 20);
+            this.версияПриложенияToolStripMenuItem.Text = "Версия приложения";
+            this.версияПриложенияToolStripMenuItem.Click += new System.EventHandler(this.версияПриложенияToolStripMenuItem_Click);
             // 
             // MainForm
             // 
@@ -374,5 +383,6 @@
         private Guna.UI2.WinForms.Guna2Panel guna2Panel3;
         private Guna.UI2.WinForms.Guna2Panel guna2Panel2;
         private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.ToolStripMenuItem версияПриложенияToolStripMenuItem;
     }
 }
