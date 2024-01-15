@@ -1,84 +1,180 @@
 ﻿using System;
+using System.Data;
 using System.Diagnostics;
+using System.Drawing;
+using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Xml;
+using System.Xml.Serialization;
+
 
 namespace ProjectOff
 {
     public partial class MainForm : Form
     {
-        private System.Windows.Forms.Timer hideLabelTimer;
         private CancellationTokenSource shutdownToken;
+        private const int MaxSeconds = 24 * 60 * 60; // Максимальное количество секунд (24 часа)
+        private DataTable presetsDataTable;
 
+        private const string FileName = "presets.xml";
+        private const string TableName = "Presets";
+        private void SerializeDataTable(DataTable dataTable, string fileName)
+        {
+            using (FileStream fs = new FileStream(fileName, FileMode.Create))
+            {
+                dataTable.WriteXml(fs, XmlWriteMode.WriteSchema);
+            }
+        }
+
+        private DataTable DeserializeDataTable(string fileName)
+        {
+            try
+            {
+                if (File.Exists(fileName))
+                {
+                    using (FileStream fs = new FileStream(fileName, FileMode.Open))
+                    {
+                        DataTable dataTable = new DataTable();
+                        dataTable.ReadXml(fs);
+                        return dataTable;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during deserialization: {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
+            }
+
+            return null;
+        }
         public MainForm()
         {
             InitializeComponent();
-            hideLabelTimer = new System.Windows.Forms.Timer();
-            hideLabelTimer.Interval = 5000; // 5 секунд
-            hideLabelTimer.Tick += HideLabelTimer_Tick;
-            label1.Visible = false; // Изначально скрываем лейбл
+            // Установить максимальное значение ввода в секундах
+            guna2TextBox1.MaxLength = MaxSeconds.ToString().Length;
+            guna2TextBox2.MaxLength = MaxSeconds.ToString().Length;
+
+            presetsDataTable = new DataTable("Presets"); // Specify the table name
+            presetsDataTable.Columns.Add("PresetID", typeof(int));
+            presetsDataTable.Columns.Add("Time", typeof(int));
+            AddPreset(1, 10);
+            AddPreset(2, 30);
+            AddPreset(3, 60);
+            AddPreset(4, 300);
+            AddPreset(5, 600);
+            // Привязка DataTable к DataGridView
+            guna2DataGridView1.DataSource = presetsDataTable;
+
+            // Добавление обработчика события CellDoubleClick
+            guna2DataGridView1.CellDoubleClick += guna2DataGridView1_CellContentDoubleClick;
+
+            // Загрузка данных из файла
+            DataTable loadedDataTable = DeserializeDataTable(FileName);
+            if (loadedDataTable != null)
+            {
+                presetsDataTable = loadedDataTable;
+            }
+            guna2Button2.Enabled = false;
+            // Привязка DataTable к DataGridView
+            guna2DataGridView1.DataSource = presetsDataTable;
+
+            MenuStrip menuStrip = new MenuStrip();
+            ToolStripMenuItem fileMenu = new ToolStripMenuItem("Файл");
+            ToolStripMenuItem openMenuItem = new ToolStripMenuItem("Открыть");
+            ToolStripMenuItem saveMenuItem = new ToolStripMenuItem("Сохранить");
+            
+            openMenuItem.Click += открытьToolStripMenuItem_Click;
+            saveMenuItem.Click += сохранитьToolStripMenuItem_Click;
+
+            // Кастомизация Menu
+            menuStrip1.BackColor = Color.FromArgb(21, 23, 25);
+            menuStrip1.ForeColor = Color.White;
+
+            //foreach (ToolStripMenuItem item in menuStrip1.Items)
+            //{
+            //    // Измените цвет фона на желаемый
+            //    item.BackColor = Color.FromArgb(0, 33, 55);
+            //}
+
+            // Фиксация размера приложения
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            Width = 655;
+            Height = 400;
         }
 
-        private void guna2Button1_Click(object sender, EventArgs e)
+        private void AddPreset(int id, int time)
+        {
+            DataRow row = presetsDataTable.NewRow();
+            row["PresetID"] = id;
+            row["Time"] = time;
+            presetsDataTable.Rows.Add(row);
+        }
+        private async void guna2Button1_Click(object sender, EventArgs e)
         {
             if (int.TryParse(guna2TextBox1.Text, out int seconds))
             {
-                // Очистить текстбокс
+                // Очистить текст в TextBox
                 guna2TextBox1.Clear();
 
-                // Вывести уведомление в MessageBox и лейбле
-                ShowNotification($"Компьютер будет выключен через {seconds} секунд", "Выключение", MessageBoxIcon.Information);
+                // Ограничить введенные секунды максимальным значением
+                seconds = Math.Min(seconds, MaxSeconds);
+
+                // Вывести уведомление
+                MessageBox.Show($"Компьютер будет выключен через {seconds} секунд", "Выключение", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 // Создать токен отмены
                 shutdownToken = new CancellationTokenSource();
 
+                // Заблокировать кнопку отмены до завершения таймера
+                guna2Button2.Enabled = true;
+                guna2Button1.Enabled = false;
                 // Начать отсчет
-                Thread countdownThread = new Thread(() =>
+                for (int i = seconds; i > 0; i--)
                 {
-                    for (int i = seconds; i > 0; i--)
+                    // Проверка на отмену
+                    if (shutdownToken.Token.IsCancellationRequested)
                     {
-                        // Проверка на отмену
-                        if (shutdownToken.Token.IsCancellationRequested)
-                        {
-                            // Вызов метода для отмены уведомления в лейбле
-                            CancelNotification();
-                            return;
-                        }
+                        // Вызов метода Invoke для безопасного обновления элемента управления
+                        UpdateStatusLabel("Выключение отменено");
 
-                        // Обновление Label с отображением времени
-                        UpdateStatusLabel($"Осталось времени: {i} секунд");
+                        // Добавить задержку перед сокрытием
+                        await Task.Delay(2000);
 
-                        Thread.Sleep(1000); // Подождать 1 секунду
+                        // Сокрыть Label
+                        UpdateStatusLabel("");
+                        break;
                     }
+                    label1.Visible = true;
+                    // Обновление Label с отображением времени
+                    UpdateStatusLabel($"Осталось времени: {i} секунд");
 
-                    // Выключение компьютера
+                    await Task.Delay(1000); // Подождать 1 секунду
+                }
+
+                // Выключение компьютера
+                if (!shutdownToken.Token.IsCancellationRequested)
+                {
                     Process.Start("shutdown", "/s /t 0");
-                });
-                countdownThread.Start();
+                }
+
+                // Разблокировать кнопку отмены после завершения таймера
+                guna2Button1.Enabled = true;
+                guna2Button2.Enabled = false;
             }
             else
             {
                 MessageBox.Show("Пожалуйста, введите корректное количество секунд", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
         private void guna2Button2_Click(object sender, EventArgs e)
         {
-            // Проверка на заполнение текстбокса перед отменой
-            if (string.IsNullOrWhiteSpace(guna2TextBox1.Text))
-            {
-                MessageBox.Show("Пожалуйста, заполните текстбокс", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
             // Отменить выключение
             if (shutdownToken != null)
             {
                 shutdownToken.Cancel();
-                // Вывести уведомление в MessageBox и лейбле
-                ShowNotification("Выключение отменено", "Отмена", MessageBoxIcon.Information);
-                // Активировать текстбокс после отмены
-                guna2TextBox1.Enabled = true;
             }
         }
 
@@ -95,33 +191,77 @@ namespace ProjectOff
             }
         }
 
-        // Метод для вывода уведомления в MessageBox и лейбле
-        private void ShowNotification(string message, string caption, MessageBoxIcon icon)
+        private void guna2Button3_Click(object sender, EventArgs e)
         {
-            MessageBox.Show(message, caption, MessageBoxButtons.OK, icon);
-            UpdateStatusLabel(message);
-            label1.Visible = true; // Показать лейбл
-            hideLabelTimer.Start(); // Запустить таймер для автоматического скрытия лейбла
-            // Деактивировать текстбокс во время отсчета
-            guna2TextBox1.Enabled = false;
+            if (int.TryParse(guna2TextBox2.Text, out int time))
+            {
+                // Генерируйте уникальный ID (можете использовать ваш способ генерации)
+                int id = presetsDataTable.Rows.Count + 1;
+
+                // Добавьте новый пресет в DataTable
+                AddPreset(id, time);
+
+                // Очистите TextBox2
+                guna2TextBox2.Clear();
+
+                // Выведите уведомление о добавлении пресета
+                MessageBox.Show($"Пресет добавлен в таблицу ({time} секунд)", "Добавление пресета", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                MessageBox.Show("Пожалуйста, введите корректное число", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
-        // Метод для отмены уведомления в лейбле
-        private void CancelNotification()
+        private void guna2DataGridView1_CellContentDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
-            UpdateStatusLabel("Выключение отменено");
-            hideLabelTimer.Start(); // Запустить таймер для автоматического скрытия лейбла
-            // Деактивировать текстбокс после отмены
-            guna2TextBox1.Enabled = false;
+            // Проверка, что была кликнута ячейка с временем (второй столбец)
+            if (e.ColumnIndex == 1 && e.RowIndex >= 0 && e.RowIndex < presetsDataTable.Rows.Count)
+            {
+                // Получение значения времени из выбранной строки
+                int selectedTime = (int)presetsDataTable.Rows[e.RowIndex]["Time"];
+
+                // Установка этого времени в TextBox1
+                guna2TextBox1.Text = selectedTime.ToString();
+            }
         }
 
-        // Обработчик события таймера для автоматического скрытия лейбла
-        private void HideLabelTimer_Tick(object sender, EventArgs e)
+        private void MainForm_FormClosed(object sender, FormClosedEventArgs e)
         {
-            label1.Visible = false; // Скрыть лейбл
-            hideLabelTimer.Stop(); // Остановить таймер
-            // Активировать текстбокс после скрытия лейбла
-            guna2TextBox1.Enabled = true;
+            if (presetsDataTable != null && presetsDataTable.Rows.Count > 0)
+            {
+                SerializeDataTable(presetsDataTable, FileName);
+            }
+        }
+     
+        private void открытьToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Filter = "XML Files|*.xml";
+            openFileDialog.Title = "Выберите файл с данными";
+
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                DataTable loadedDataTable = DeserializeDataTable(openFileDialog.FileName);
+                if (loadedDataTable != null)
+                {
+                    presetsDataTable.Clear();
+                    presetsDataTable = loadedDataTable.Copy(); // Use Copy to avoid potential structure differences
+                    guna2DataGridView1.DataSource = presetsDataTable; // Update the DataGridView
+                }
+            }
+        }
+
+        private void сохранитьToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.Filter = "XML Files|*.xml";
+            saveFileDialog.Title = "Выберите место для сохранения файла с данными";
+
+            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                SerializeDataTable(presetsDataTable, saveFileDialog.FileName);
+            }
         }
     }
 }
