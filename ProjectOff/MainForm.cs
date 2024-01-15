@@ -3,6 +3,7 @@ using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -20,6 +21,7 @@ namespace ProjectOff
 
         private const string FileName = "presets.xml";
         private const string TableName = "Presets";
+
         private void SerializeDataTable(DataTable dataTable, string fileName)
         {
             using (FileStream fs = new FileStream(fileName, FileMode.Create))
@@ -53,11 +55,9 @@ namespace ProjectOff
         public MainForm()
         {
             InitializeComponent();
-            // Установить максимальное значение ввода в секундах
             guna2TextBox1.MaxLength = MaxSeconds.ToString().Length;
             guna2TextBox2.MaxLength = MaxSeconds.ToString().Length;
-
-            presetsDataTable = new DataTable("Presets"); // Specify the table name
+            presetsDataTable = new DataTable("Presets");
             presetsDataTable.Columns.Add("PresetID", typeof(int));
             presetsDataTable.Columns.Add("Time", typeof(int));
             AddPreset(1, 10);
@@ -67,8 +67,6 @@ namespace ProjectOff
             AddPreset(5, 600);
             // Привязка DataTable к DataGridView
             guna2DataGridView1.DataSource = presetsDataTable;
-
-            // Добавление обработчика события CellDoubleClick
             guna2DataGridView1.CellDoubleClick += guna2DataGridView1_CellContentDoubleClick;
 
             // Загрузка данных из файла
@@ -78,6 +76,7 @@ namespace ProjectOff
                 presetsDataTable = loadedDataTable;
             }
             guna2Button2.Enabled = false;
+
             // Привязка DataTable к DataGridView
             guna2DataGridView1.DataSource = presetsDataTable;
 
@@ -92,12 +91,6 @@ namespace ProjectOff
             // Кастомизация Menu
             menuStrip1.BackColor = Color.FromArgb(21, 23, 25);
             menuStrip1.ForeColor = Color.White;
-
-            //foreach (ToolStripMenuItem item in menuStrip1.Items)
-            //{
-            //    // Измените цвет фона на желаемый
-            //    item.BackColor = Color.FromArgb(0, 33, 55);
-            //}
 
             // Фиксация размера приложения
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -131,6 +124,7 @@ namespace ProjectOff
                 // Заблокировать кнопку отмены до завершения таймера
                 guna2Button2.Enabled = true;
                 guna2Button1.Enabled = false;
+
                 // Начать отсчет
                 for (int i = seconds; i > 0; i--)
                 {
@@ -195,13 +189,13 @@ namespace ProjectOff
         {
             if (int.TryParse(guna2TextBox2.Text, out int time))
             {
-                // Генерируйте уникальный ID (можете использовать ваш способ генерации)
+                // Генерация уникального ID
                 int id = presetsDataTable.Rows.Count + 1;
 
-                // Добавьте новый пресет в DataTable
+                // Добавление нового пресета в DataTable
                 AddPreset(id, time);
 
-                // Очистите TextBox2
+                // Очистка TextBox2
                 guna2TextBox2.Clear();
 
                 // Выведите уведомление о добавлении пресета
@@ -246,8 +240,8 @@ namespace ProjectOff
                 if (loadedDataTable != null)
                 {
                     presetsDataTable.Clear();
-                    presetsDataTable = loadedDataTable.Copy(); // Use Copy to avoid potential structure differences
-                    guna2DataGridView1.DataSource = presetsDataTable; // Update the DataGridView
+                    presetsDataTable = loadedDataTable.Copy();
+                    guna2DataGridView1.DataSource = presetsDataTable;
                 }
             }
         }
@@ -262,6 +256,12 @@ namespace ProjectOff
             {
                 SerializeDataTable(presetsDataTable, saveFileDialog.FileName);
             }
+        }
+
+        private void MainForm_Load(object sender, EventArgs e)
+        {
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            this.MaximizeBox = false;
         }
     }
 }
