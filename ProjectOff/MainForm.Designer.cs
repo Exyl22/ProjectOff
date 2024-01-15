@@ -49,8 +49,8 @@
             this.файлToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.открытьToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.сохранитьToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.label5 = new System.Windows.Forms.Label();
             this.версияПриложенияToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.label5 = new System.Windows.Forms.Label();
             this.guna2Panel1.SuspendLayout();
             this.guna2Panel3.SuspendLayout();
             this.guna2Panel2.SuspendLayout();
@@ -308,6 +308,13 @@
             this.сохранитьToolStripMenuItem.Text = "Сохранить";
             this.сохранитьToolStripMenuItem.Click += new System.EventHandler(this.сохранитьToolStripMenuItem_Click);
             // 
+            // версияПриложенияToolStripMenuItem
+            // 
+            this.версияПриложенияToolStripMenuItem.Name = "версияПриложенияToolStripMenuItem";
+            this.версияПриложенияToolStripMenuItem.Size = new System.Drawing.Size(131, 20);
+            this.версияПриложенияToolStripMenuItem.Text = "Версия приложения";
+            this.версияПриложенияToolStripMenuItem.Click += new System.EventHandler(this.версияПриложенияToolStripMenuItem_Click);
+            // 
             // label5
             // 
             this.label5.AutoSize = true;
@@ -318,13 +325,6 @@
             this.label5.Size = new System.Drawing.Size(81, 13);
             this.label5.TabIndex = 11;
             this.label5.Text = "Лимит 24 часа";
-            // 
-            // версияПриложенияToolStripMenuItem
-            // 
-            this.версияПриложенияToolStripMenuItem.Name = "версияПриложенияToolStripMenuItem";
-            this.версияПриложенияToolStripMenuItem.Size = new System.Drawing.Size(131, 20);
-            this.версияПриложенияToolStripMenuItem.Text = "Версия приложения";
-            this.версияПриложенияToolStripMenuItem.Click += new System.EventHandler(this.версияПриложенияToolStripMenuItem_Click);
             // 
             // MainForm
             // 
@@ -347,7 +347,7 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "MainForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "MainForm";
+            this.Text = "ProjectOff";
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.MainForm_FormClosed);
             this.Load += new System.EventHandler(this.MainForm_Load);
             this.guna2Panel1.ResumeLayout(false);
