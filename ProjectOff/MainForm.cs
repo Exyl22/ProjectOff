@@ -61,7 +61,7 @@ namespace ProjectOff
             var client = new WebClient();
             webClient.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.NoCacheNoStore);
 
-            if (!webClient.DownloadString("https://www.dropbox.com/scl/fi/e3dkg7hsmhz3dald7q2n3/Update.txt?rlkey=1caeslgdoknbt853zwk7bskjb&dl=1").Contains("1.0.0"))
+            if (!webClient.DownloadString("https://www.dropbox.com/scl/fi/e3dkg7hsmhz3dald7q2n3/Update.txt?rlkey=1caeslgdoknbt853zwk7bskjb&dl=1").Contains("1.0.1"))
             {
                 if (MessageBox.Show("Новое обновление уже доступно! Хотите установить более новую версию?", "Обновление", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes){
                
@@ -92,11 +92,9 @@ namespace ProjectOff
             presetsDataTable = new DataTable("Presets");
             presetsDataTable.Columns.Add("PresetID", typeof(int));
             presetsDataTable.Columns.Add("Time", typeof(int));
-            AddPreset(1, 10);
-            AddPreset(2, 30);
-            AddPreset(3, 60);
-            AddPreset(4, 300);
-            AddPreset(5, 600);
+            presetsDataTable = LoadOrCreateDefaultPresets();
+          //  guna2DataGridView1.Columns["PresetID"].Visible = false;
+
             // Привязка DataTable к DataGridView
             guna2DataGridView1.DataSource = presetsDataTable;
             guna2DataGridView1.CellDoubleClick += guna2DataGridView1_CellContentDoubleClick;
@@ -129,7 +127,33 @@ namespace ProjectOff
             Width = 655;
             Height = 400;
         }
+        private DataTable LoadOrCreateDefaultPresets()
+        {
+            DataTable dataTable;
 
+            if (File.Exists(FileName))
+            {
+                // Если файл существует, загрузить данные из файла
+                dataTable = DeserializeDataTable(FileName);
+            }
+            else
+            {
+                // Если файл не существует, создать новую DataTable с дефолтными значениями
+                dataTable = new DataTable("Presets");
+                dataTable.Columns.Add("PresetID", typeof(int));
+                dataTable.Columns.Add("Time", typeof(int));
+                AddPreset(1, 10);
+                AddPreset(2, 30);
+                AddPreset(3, 60);
+                AddPreset(4, 300);
+                AddPreset(5, 600);
+
+                // Сериализовать DataTable в файл
+                SerializeDataTable(dataTable, FileName);
+            }
+
+            return dataTable;
+        }
         private void AddPreset(int id, int time)
         {
             DataRow row = presetsDataTable.NewRow();
@@ -207,13 +231,16 @@ namespace ProjectOff
         // Метод для безопасного обновления элемента управления из другого потока
         private void UpdateStatusLabel(string text)
         {
-            if (InvokeRequired)
+            if (label1 != null)
             {
-                Invoke(new Action(() => label1.Text = text));
-            }
-            else
-            {
-                label1.Text = text;
+                if (label1.InvokeRequired)
+                {
+                    Invoke(new Action(() => label1.Text = text));
+                }
+                else
+                {
+                    label1.Text = text;
+                }
             }
         }
 
@@ -299,7 +326,7 @@ namespace ProjectOff
         private void версияПриложенияToolStripMenuItem_Click(object sender, EventArgs e)
         {
             string version = Application.ProductVersion;
-            MessageBox.Show($"Данное приложение находится на стадии не конечного продукта!\nТекущая версия приложения: {version}", "Версия приложения", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show($"Текущая версия приложения: {version}", "Версия приложения", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }
