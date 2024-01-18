@@ -12,6 +12,7 @@ using System.Xml.Serialization;
 using System.IO.Compression;
 using System.Net;
 using ProjectOff.Classes;
+using ProjectOff.Forms;
 
 namespace ProjectOff
 {
@@ -22,17 +23,14 @@ namespace ProjectOff
         private DataTable presetsDataTable;
         private PresetManager presetManager = new PresetManager();
 
-        private const string FileName = "presets.xml";
-
         public MainForm()
         {
             InitializeComponent();
-
             WebClient webClient = new WebClient();
             var client = new WebClient();
             webClient.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.NoCacheNoStore);
 
-            if (!webClient.DownloadString("https://www.dropbox.com/scl/fi/e3dkg7hsmhz3dald7q2n3/Update.txt?rlkey=1caeslgdoknbt853zwk7bskjb&dl=1").Contains("1.0.3.0"))
+            if (!webClient.DownloadString("https://www.dropbox.com/scl/fi/e3dkg7hsmhz3dald7q2n3/Update.txt?rlkey=1caeslgdoknbt853zwk7bskjb&dl=1").Contains("1.0.6"))
             {
                 if (MessageBox.Show("Новое обновление уже доступно! Хотите установить более новую версию?", "Обновление", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 {
@@ -65,6 +63,7 @@ namespace ProjectOff
             guna2DataGridView1.CellDoubleClick += guna2DataGridView1_CellContentDoubleClick;
 
             guna2Button2.Enabled = false;
+            guna2ComboBox1.SelectedIndex = 0;
 
             MenuStrip menuStrip = new MenuStrip();
             ToolStripMenuItem fileMenu = new ToolStripMenuItem("Файл");
@@ -78,17 +77,42 @@ namespace ProjectOff
             menuStrip1.ForeColor = Color.White;
 
             FormBorderStyle = FormBorderStyle.FixedSingle;
-            Width = 655;
-            Height = 400;
+            Width = 660;
+            Height = 390;
+            guna2DataGridView1.Columns[0].Visible = false;
+            guna2DataGridView1.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+
+            // Центрирование заголовков столбцов
+            guna2DataGridView1.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+
+            // Центрирование заголовка строк
+            guna2DataGridView1.RowHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+
+            // Центрирование заголовка столбца
+            foreach (DataGridViewColumn column in guna2DataGridView1.Columns)
+            {
+                column.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            }
+
         }
 
         private async void guna2Button1_Click(object sender, EventArgs e)
         {
+            string selectedAction = guna2ComboBox1.SelectedItem?.ToString();
+
+            if (string.IsNullOrEmpty(selectedAction))
+            {
+                MessageBox.Show("Пожалуйста, выберите действие в комбобоксе", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             if (int.TryParse(guna2TextBox1.Text, out int seconds))
             {
                 guna2TextBox1.Clear();
                 seconds = Math.Min(seconds, MaxSeconds);
-                MessageBox.Show($"Компьютер будет выключен через {seconds} секунд", "Выключение", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                MessageBox.Show($"Таймер на {seconds} секунд запущен!", selectedAction, MessageBoxButtons.OK, MessageBoxIcon.Information);
+
                 shutdownToken = new CancellationTokenSource();
                 guna2Button2.Enabled = true;
                 guna2Button1.Enabled = false;
@@ -97,19 +121,45 @@ namespace ProjectOff
                 {
                     if (shutdownToken.Token.IsCancellationRequested)
                     {
-                        UpdateStatusLabel("Выключение отменено");
+                        UpdateStatusLabel($"{selectedAction} отменено");
                         await Task.Delay(2000);
                         UpdateStatusLabel("");
                         break;
                     }
+
                     label1.Visible = true;
-                    UpdateStatusLabel($"Осталось времени: {i} секунд");
+                    if (selectedAction == "Выключение")
+                    {
+                        UpdateStatusLabel($"Осталось секунд до выключения ПК: {i}");
+                    }
+                    else if (selectedAction == "Перезагрузка")
+                    {
+                        UpdateStatusLabel($"Осталось секунд до перезагрузки ПК: {i}");
+                    }
+                    else if (selectedAction == "Спящий режим")
+                    {
+                        UpdateStatusLabel($"Осталось секунд до спящего режима ПК: {i}");
+                    }
+
                     await Task.Delay(1000);
                 }
 
                 if (!shutdownToken.Token.IsCancellationRequested)
                 {
-                    Process.Start("shutdown", "/s /t 0");
+                    switch (selectedAction)
+                    {
+                        case "Выключение":
+                            ShutdownManager.Shutdown();
+                            break;
+                        case "Перезагрузка":
+                            ShutdownManager.Restart();
+                            break;
+                        case "Спящий режим":
+                            ShutdownManager.Sleep();
+                            break;
+                        default:
+                            break;
+                    }
                 }
 
                 guna2Button1.Enabled = true;
@@ -120,7 +170,6 @@ namespace ProjectOff
                 MessageBox.Show("Пожалуйста, введите корректное количество секунд", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
         private void guna2Button2_Click(object sender, EventArgs e)
         {
             if (shutdownToken != null)
@@ -129,17 +178,18 @@ namespace ProjectOff
             }
         }
 
-        private void UpdateStatusLabel(string text)
+        private void UpdateStatusLabel(string format, params object[] args)
         {
+            string statusMessage = string.Format(format, args);
             if (label1 != null)
             {
                 if (label1.InvokeRequired)
                 {
-                    Invoke(new Action(() => label1.Text = text));
+                    Invoke(new Action(() => label1.Text = statusMessage));
                 }
                 else
                 {
-                    label1.Text = text;
+                    label1.Text = statusMessage;
                 }
             }
         }
@@ -163,8 +213,15 @@ namespace ProjectOff
         {
             if (e.ColumnIndex == 1 && e.RowIndex >= 0 && e.RowIndex < presetsDataTable.Rows.Count)
             {
-                int selectedTime = (int)presetsDataTable.Rows[e.RowIndex]["Time"];
-                guna2TextBox1.Text = selectedTime.ToString();
+                if (presetsDataTable.Rows[e.RowIndex]["Time"] != DBNull.Value)
+                {
+                    int selectedTime = (int)presetsDataTable.Rows[e.RowIndex]["Time"];
+                    guna2TextBox1.Text = selectedTime.ToString();
+                }
+                else
+                {
+                    MessageBox.Show("Ваша ячейка пустая! Пожалуйста, выберите ячейку со значением.", "Пустая ячейка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
         }
 
@@ -214,8 +271,36 @@ namespace ProjectOff
 
         private void версияПриложенияToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            string version = Application.ProductVersion;
-            MessageBox.Show($"Текущая версия приложения: {version}\nПриложение находится на стадии тестирования.", "Версия приложения", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            InfoForm infoForm = new InfoForm();
+            infoForm.ShowDialog();
+        }
+
+        private void guna2Button4_Click(object sender, EventArgs e)
+        {
+            if (guna2DataGridView1.SelectedRows.Count > 0)
+            {
+                DialogResult result = MessageBox.Show("Вы уверены, что хотите удалить выбранную строку?", "Подтверждение удаления", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    foreach (DataGridViewRow row in guna2DataGridView1.SelectedRows)
+                    {
+                        if (!string.IsNullOrWhiteSpace(row.Cells["Time"].Value?.ToString()))
+                        {
+                            presetsDataTable.Rows.RemoveAt(row.Index);
+                            MessageBox.Show("Выбранная строка удалена", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Невозможно удалить пустую строку", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("Пожалуйста, выберите строку для удаления", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }
